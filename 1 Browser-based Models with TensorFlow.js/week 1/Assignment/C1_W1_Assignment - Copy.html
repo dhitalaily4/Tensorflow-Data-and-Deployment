@@ -1,0 +1,69 @@
+<html>
+<head></head>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+<script lang="js">
+        
+async function run(){
+    // Membaca file CSV dari sistem file lokal Anda
+    async function loadCSV(filePath) {
+        const response = await fetch(filePath);
+        const data = await response.text();
+        return data;
+    }
+
+    const trainingDataCSV = await loadCSV('file:///D:/Backup%20C/Documents/dhita/Bangkit/coursera%207/1%20Browser-based%20Models%20with%20TensorFlow.js/week%201/Assignment/dataset/wdbc-train.csv');
+    const testingDataCSV = await loadCSV('file:///D:/Backup%20C/Documents/dhita/Bangkit/coursera%207/1%20Browser-based%20Models%20with%20TensorFlow.js/week%201/Assignment/dataset/wdbc-test.csv');
+
+    // Parsing data CSV ke dalam bentuk array
+    const parseCSV = (csv) => {
+        const rows = csv.trim().split('\n');
+        return rows.map(row => row.split(','));
+    };
+
+    // Mengonversi data CSV menjadi bentuk yang dapat digunakan oleh TensorFlow.js
+    const trainingData = parseCSV(trainingDataCSV);
+    const testingData = parseCSV(testingDataCSV);
+
+    // Convert the training data into arrays
+    const convertedTrainingData = trainingData.map(([diagnosis, ...features]) => ({
+        xs: features.map(Number),
+        ys: diagnosis === 'M' ? [1] : [0] // Encoding diagnosis: M -> 1, B -> 0
+    }));
+    
+    // Convert the testing data into arrays
+    const convertedTestingData = testingData.map(([diagnosis, ...features]) => ({
+        xs: features.map(Number),
+        ys: diagnosis === 'M' ? [1] : [0] // Encoding diagnosis: M -> 1, B -> 0
+    }));
+
+    // Specify the number of features
+    const numOfFeatures = convertedTrainingData[0].xs.length;
+    
+    // Create a neural network model
+    const model = tf.sequential();
+    model.add(tf.layers.dense({inputShape: [numOfFeatures], activation: "relu", units: 32}));
+    model.add(tf.layers.dense({activation: "relu", units: 64}));
+    model.add(tf.layers.dense({activation: "relu", units: 32}));
+    model.add(tf.layers.dense({activation: "sigmoid", units: 1}));
+
+    // Compile the model
+    model.compile({loss: "binaryCrossentropy", optimizer: tf.train.rmsprop(0.01), metrics: ['accuracy']});
+
+    // Convert the data into tensors
+    const xsTrain = tf.tensor2d(convertedTrainingData.map(item => item.xs));
+    const ysTrain = tf.tensor2d(convertedTrainingData.map(item => item.ys));
+    const xsTest = tf.tensor2d(convertedTestingData.map(item => item.xs));
+    const ysTest = tf.tensor2d(convertedTestingData.map(item => item.ys));
+
+    // Train the model
+    await model.fit(xsTrain, ysTrain, {epochs: 100, validationData: [xsTest, ysTest]});
+
+    // Save the model
+    await model.save('downloads://my_model');
+}
+
+run();
+</script>
+<body>
+</body>
+</html>
